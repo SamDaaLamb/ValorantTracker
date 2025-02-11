@@ -262,6 +262,7 @@ if __name__ == "__main__":
     y = model(x)
     print("Output shape:", y.shape)  # Expected output shape for YOLOv5
 from pathlib import Path
+from models.common import DetectMultiBackend 
 def srdetect():
     # model = YOLOv5(1)
     # checkpoint = torch.hub.load_state_dict_from_url('https://github.com/SamDaaLamb/ValorantTracker/blob/main/runs/train/weights/best.pt?raw=true', map_location="cpu")
@@ -312,17 +313,32 @@ def srdetect():
     
     # return model
         # ✅ Ensure YOLOv5 is installed
-    repo = "ultralytics/yolov5"
-    model_file = 'best.pt'
+    # repo = "ultralytics/yolov5"
+    # model_file = 'best.pt'
 
-    # ✅ Download the model checkpoint properly
-    checkpoint_path = torch.hub.load_state_dict_from_url(
-        'https://github.com/SamDaaLamb/ValorantTracker/blob/main/runs/train/weights/best.pt?raw=true',
-        map_location="cpu"
-    )
+    # # ✅ Download the model checkpoint properly
+    # checkpoint_path = torch.hub.load_state_dict_from_url(
+    #     'https://github.com/SamDaaLamb/ValorantTracker/blob/main/runs/train/weights/best.pt?raw=true',
+    #     map_location="cpu"
+    # )
 
-    # ✅ Load model from checkpoint
-    model = torch.hub.load(repo, 'custom', path_or_model=checkpoint_path, source='github', force_reload=True)
+    # # ✅ Load model from checkpoint
+    # model = torch.hub.load(repo, 'custom', path_or_model=checkpoint_path, source='github', force_reload=True)
+
+    # return model
+
+
+    # ✅ Define the model weights URL
+    weights_url = 'https://github.com/SamDaaLamb/ValorantTracker/blob/main/runs/train/weights/best.pt?raw=true'
+    
+    # ✅ Download and load checkpoint correctly
+    weights_path = torch.hub.load_state_dict_from_url(weights_url, map_location="cpu")
+
+    # ✅ Load model using DetectMultiBackend (ensures correct architecture)
+    model = DetectMultiBackend(weights_path, device="cpu")
+
+    # ✅ Set model to evaluation mode
+    model.eval()
 
     return model
 
