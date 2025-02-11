@@ -263,7 +263,7 @@ if __name__ == "__main__":
     print("Output shape:", y.shape)  # Expected output shape for YOLOv5
 
 def srdetect():
-    model = YOLOv5()
+    model = YOLOv5(1)
     checkpoint = torch.hub.load_state_dict_from_url('https://github.com/SamDaaLamb/ValorantTracker/blob/main/runs/train/weights/best.pt?raw=true', map_location="cpu")
     state_dict = {key.replace("net.", ""): value for key, value in checkpoint["state_dict"].items()}
     model.load_state_dict(state_dict)
