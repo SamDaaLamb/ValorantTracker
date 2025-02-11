@@ -280,6 +280,22 @@ def srdetect():
     # print("Checkpoint Keys:", checkpoint.keys())
 
     # return model
+    # model = YOLOv5(1)
+
+    # # Load checkpoint
+    # checkpoint = torch.hub.load_state_dict_from_url(
+    #     'https://github.com/SamDaaLamb/ValorantTracker/blob/main/runs/train/weights/best.pt?raw=true', 
+    #     map_location="cpu"
+    # )
+
+    # # Extract model weights
+    # state_dict = checkpoint["model"]  # ✅ Correct key
+
+    # # Load the model weights
+    # model.load_state_dict(state_dict)
+    
+    # return model
+
     model = YOLOv5(1)
 
     # Load checkpoint
@@ -288,11 +304,12 @@ def srdetect():
         map_location="cpu"
     )
 
-    # Extract model weights
-    state_dict = checkpoint["model"]  # ✅ Correct key
+    # Extract model's state dictionary correctly
+    state_dict = checkpoint["model"].state_dict()  # ✅ Extract the actual weights
 
-    # Load the model weights
+    # Load the weights into our model
     model.load_state_dict(state_dict)
     
     return model
+
 
