@@ -139,18 +139,133 @@ if __name__ == '__main__':
         cv2.imread('data/images/bus.jpg')[:, :, ::-1],  # OpenCV
         Image.open('data/images/bus.jpg'),  # PIL
         np.zeros((320, 640, 3))]  # numpy
+    
+    results = model(imgs, size=320)  # batched inference
+    results.print()
+    results.save()
+
 dependencies = ['torch']
 
 
-from demo.ASPP import SRDetectModel
+# from demo.ASPP import SRDetectModel
+# import torch
+import torch.nn as nn
+
+# === Basic Convolution Block ===
+class Conv(nn.Module):
+    def __init__(self, in_channels, out_channels, kernel_size, stride=1, padding=None, groups=1):
+        super().__init__()
+        if padding is None:
+            padding = kernel_size // 2
+        self.conv = nn.Conv2d(in_channels, out_channels, kernel_size, stride, padding, groups=groups, bias=False)
+        self.bn = nn.BatchNorm2d(out_channels)
+        self.act = nn.SiLU()  # Swish activation
+
+    def forward(self, x):
+        return self.act(self.bn(self.conv(x)))
+
+# === Bottleneck CSP Block ===
+class BottleneckCSP(nn.Module):
+    def __init__(self, in_channels, out_channels, n=1):
+        super().__init__()
+        hidden_channels = out_channels // 2
+        self.conv1 = Conv(in_channels, hidden_channels, 1, 1)
+        self.conv2 = Conv(in_channels, hidden_channels, 1, 1)
+        self.conv3 = Conv(hidden_channels, hidden_channels, 3, 1)
+        self.conv4 = Conv(hidden_channels * 2, out_channels, 1, 1)
+        self.n = n
+
+    def forward(self, x):
+        y1 = self.conv1(x)
+        for _ in range(self.n):
+            y1 = self.conv3(y1)
+        y2 = self.conv2(x)
+        return self.conv4(torch.cat((y1, y2), dim=1))
+
+# === Spatial Pyramid Pooling (SPP) ===
+class SPP(nn.Module):
+    def __init__(self, in_channels, out_channels):
+        super().__init__()
+        self.conv1 = Conv(in_channels, out_channels, 1, 1)
+        self.pool1 = nn.MaxPool2d(kernel_size=5, stride=1, padding=2)
+        self.pool2 = nn.MaxPool2d(kernel_size=9, stride=1, padding=4)
+        self.pool3 = nn.MaxPool2d(kernel_size=13, stride=1, padding=6)
+        self.conv2 = Conv(out_channels * 4, out_channels, 1, 1)
+
+    def forward(self, x):
+        x = self.conv1(x)
+        return self.conv2(torch.cat([x, self.pool1(x), self.pool2(x), self.pool3(x)], dim=1))
+
+# === Backbone (Feature Extractor) ===
+class Backbone(nn.Module):
+    def __init__(self, nc):
+        super().__init__()
+        self.focus = Conv(3, 64, 3)
+        self.conv1 = Conv(64, 128, 3, 2)
+        self.bottleneck1 = BottleneckCSP(128, 128, 3)
+        self.conv2 = Conv(128, 256, 3, 2)
+        self.bottleneck2 = BottleneckCSP(256, 256, 9)
+        self.conv3 = Conv(256, 512, 3, 2)
+        self.bottleneck3 = BottleneckCSP(512, 512, 9)
+        self.conv4 = Conv(512, 1024, 3, 2)
+        self.spp = SPP(1024, 1024)
+        self.bottleneck4 = BottleneckCSP(1024, 1024, 3)
+
+    def forward(self, x):
+        x = self.focus(x)
+        x = self.conv1(x)
+        x = self.bottleneck1(x)
+        x = self.conv2(x)
+        x = self.bottleneck2(x)
+        x = self.conv3(x)
+        x = self.bottleneck3(x)
+        x = self.conv4(x)
+        x = self.spp(x)
+        x = self.bottleneck4(x)
+        return x
+
+# === Head (Upsampling & Detection) ===
+class Head(nn.Module):
+    def __init__(self, nc):
+        super().__init__()
+        self.conv1 = Conv(1024, 512, 1, 1)
+        self.upsample1 = nn.Upsample(scale_factor=2, mode='nearest')
+        self.conv2 = Conv(512, 256, 1, 1)
+        self.upsample2 = nn.Upsample(scale_factor=2, mode='nearest')
+        self.detect = nn.Conv2d(256, nc * (5 + nc), 1, 1)  # Detection layer
+
+    def forward(self, x):
+        x = self.conv1(x)
+        x = self.upsample1(x)
+        x = self.conv2(x)
+        x = self.upsample2(x)
+        x = self.detect(x)
+        return x
+
+# === YOLOv5 Model (Backbone + Head) ===
+class YOLOv5(nn.Module):
+    def __init__(self, nc):
+        super().__init__()
+        self.backbone = Backbone(nc)
+        self.head = Head(nc)
+
+    def forward(self, x):
+        x = self.backbone(x)
+        x = self.head(x)
+        return x
+
+# === Test the Model ===
+if __name__ == "__main__":
+    nc = 80  # Number of classes (change this for your dataset)
+    model = YOLOv5(nc)
+    x = torch.randn(1, 3, 640, 640)  # Example input tensor
+    y = model(x)
+    print("Output shape:", y.shape)  # Expected output shape for YOLOv5
 
 def srdetect():
-    model = SRDetectModel()
+    model = YOLOv5()
     checkpoint = torch.hub.load_state_dict_from_url('https://github.com/SamDaaLamb/ValorantTracker/blob/main/runs/train/weights/best.pt?raw=true', map_location="cpu")
     state_dict = {key.replace("net.", ""): value for key, value in checkpoint["state_dict"].items()}
     model.load_state_dict(state_dict)
     return model
 
-    results = model(imgs, size=320)  # batched inference
-    results.print()
-    results.save()
