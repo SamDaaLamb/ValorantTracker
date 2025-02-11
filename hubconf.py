@@ -268,16 +268,31 @@ def srdetect():
     # state_dict = {key.replace("net.", ""): value for key, value in checkpoint["state_dict"].items()}
     # model.load_state_dict(state_dict)
     # return model
-    model = YOLOv5(1)
+    # model = YOLOv5(1)
     
-    # Load the checkpoint file
+    # # Load the checkpoint file
+    # checkpoint = torch.hub.load_state_dict_from_url(
+    #     'https://github.com/SamDaaLamb/ValorantTracker/blob/main/runs/train/weights/best.pt?raw=true', 
+    #     map_location="cpu"
+    # )
+    
+    # # Print the keys to check the file structure
+    # print("Checkpoint Keys:", checkpoint.keys())
+
+    # return model
+    model = YOLOv5(1)
+
+    # Load checkpoint
     checkpoint = torch.hub.load_state_dict_from_url(
         'https://github.com/SamDaaLamb/ValorantTracker/blob/main/runs/train/weights/best.pt?raw=true', 
         map_location="cpu"
     )
-    
-    # Print the keys to check the file structure
-    print("Checkpoint Keys:", checkpoint.keys())
 
+    # Extract model weights
+    state_dict = checkpoint["model"]  # ✅ Correct key
+
+    # Load the model weights
+    model.load_state_dict(state_dict)
+    
     return model
 
