@@ -261,7 +261,7 @@ if __name__ == "__main__":
     x = torch.randn(1, 3, 640, 640)  # Example input tensor
     y = model(x)
     print("Output shape:", y.shape)  # Expected output shape for YOLOv5
-
+from pathlib import Path
 def srdetect():
     # model = YOLOv5(1)
     # checkpoint = torch.hub.load_state_dict_from_url('https://github.com/SamDaaLamb/ValorantTracker/blob/main/runs/train/weights/best.pt?raw=true', map_location="cpu")
@@ -296,20 +296,35 @@ def srdetect():
     
     # return model
 
-    model = YOLOv5(1)
+    # model = YOLOv5(1)
 
-    # Load checkpoint
-    checkpoint = torch.hub.load_state_dict_from_url(
-        'https://github.com/SamDaaLamb/ValorantTracker/blob/main/runs/train/weights/best.pt?raw=true', 
+    # # Load checkpoint
+    # checkpoint = torch.hub.load_state_dict_from_url(
+    #     'https://github.com/SamDaaLamb/ValorantTracker/blob/main/runs/train/weights/best.pt?raw=true', 
+    #     map_location="cpu"
+    # )
+
+    # # Extract model's state dictionary correctly
+    # state_dict = checkpoint["model"].state_dict()  # ✅ Extract the actual weights
+
+    # # Load the weights into our model
+    # model.load_state_dict(state_dict)
+    
+    # return model
+        # ✅ Ensure YOLOv5 is installed
+    repo = "ultralytics/yolov5"
+    model_file = 'best.pt'
+
+    # ✅ Download the model checkpoint properly
+    checkpoint_path = torch.hub.load_state_dict_from_url(
+        'https://github.com/SamDaaLamb/ValorantTracker/blob/main/runs/train/weights/best.pt?raw=true',
         map_location="cpu"
     )
 
-    # Extract model's state dictionary correctly
-    state_dict = checkpoint["model"].state_dict()  # ✅ Extract the actual weights
+    # ✅ Load model from checkpoint
+    model = torch.hub.load(repo, 'custom', path_or_model=checkpoint_path, source='github', force_reload=True)
 
-    # Load the weights into our model
-    model.load_state_dict(state_dict)
-    
     return model
+
 
 
