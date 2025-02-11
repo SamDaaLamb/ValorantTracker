@@ -139,6 +139,17 @@ if __name__ == '__main__':
         cv2.imread('data/images/bus.jpg')[:, :, ::-1],  # OpenCV
         Image.open('data/images/bus.jpg'),  # PIL
         np.zeros((320, 640, 3))]  # numpy
+dependencies = ['torch']
+
+
+from demo.ASPP import SRDetectModel
+
+def srdetect():
+    model = SRDetectModel()
+    checkpoint = torch.hub.load_state_dict_from_url('https://github.com/SamDaaLamb/ValorantTracker/blob/main/runs/train/weights/best.pt?raw=true', map_location="cpu")
+    state_dict = {key.replace("net.", ""): value for key, value in checkpoint["state_dict"].items()}
+    model.load_state_dict(state_dict)
+    return model
 
     results = model(imgs, size=320)  # batched inference
     results.print()
